@@ -1,0 +1,66 @@
+One-Page Intent Boundary Abstraction Map
+
+This map shows where intent is declared, transformed, and explicitly ends at each layer of the security control plane. The purpose is to prevent category errors and to make architectural responsibility boundaries explicit.
+
+HIGH-LEVEL STACK VIEW
+
+BUSINESS / RISK INTENT
+- Risk tolerance, compliance objectives, data classification
+- Expressed in policy principles, not enforceable artifacts
+- INTENT ENDS: cannot be directly enforced by any control
+
+SECURITY POLICY INTENT (DECLARATIVE)
+- "Only declared access is permitted"
+- Application relationships, trust boundaries
+- Technology-agnostic
+- INTENT ENDS: before protocol, identity format, or tooling
+
+IDENTITY & AUTHORIZATION INTENT (L7)
+- Who may perform what action under what context
+- JWT claims, device posture, risk, method/endpoint
+- Evaluated per request
+- INTENT ENDS: at application-visible actions
+
+NETWORK / CONNECTIVITY INTENT (L3/L4)
+- Which application may reach which application
+- Ports, protocols, zones
+- Path-aware, vendor-translated
+- INTENT ENDS: cannot see user, method, or data
+
+ENFORCEMENT ARTIFACTS
+- Firewall rules, ZTNA proxy policies, mesh authZ rules
+- IAM bindings, NetworkPolicies
+- Imperative, vendor-specific
+- NO INTENT: artifacts only enforce, never reason
+
+LAYER-BY-LAYER BOUNDARIES
+
+Business / Risk:
+- Means organizational risk decisions
+- Enforces nothing directly
+- Ends before protocols or identities
+
+Security Policy:
+- Means desired allowed outcomes
+- Enforces governance only
+- Ends before execution and authentication
+
+Identity / Authorization:
+- Means subject + action + context
+- Enforces per-request allow/deny
+- Ends before routing and packet flow
+
+Network (L3/L4):
+- Means application connectivity
+- Enforces packet filtering
+- Ends before users, actions, or data semantics
+
+Explicit Non-Goals
+- Network intent does not enforce Zero Trust authorization
+- ZTNA brokerage does not create identity propagation
+- JWTs do not express business risk intent
+- Firewalls do not understand actions or data sensitivity
+- Enforcement artifacts do not replace policy ownership
+
+Rule of Thumb:
+If a control cannot see identity + action + context, intent has already ended one layer above it.
