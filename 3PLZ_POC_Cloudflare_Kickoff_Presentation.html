@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3PLZ POC — Cloudflare Vendor Overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #080e1c;
+  --slide-bg:  #0c1425;
+  --surface:   rgba(255,255,255,0.04);
+  --border:    rgba(255,255,255,0.07);
+  --text:      #cbd5e1;
+  --heading:   #f1f5f9;
+  --gold:      #c9a84c;
+  --gold-dim:  rgba(201,168,76,0.15);
+  --blue:      #5b9cf6;
+  --blue-dim:  rgba(91,156,246,0.12);
+  --red:       #ef4444;
+  --red-dim:   rgba(239,68,68,0.12);
+  --amber:     #f59e0b;
+  --amber-dim: rgba(245,158,11,0.12);
+  --green:     #4ade80;
+  --green-dim: rgba(74,222,128,0.10);
+  --mono:      'JetBrains Mono', monospace;
+  --serif:     'Playfair Display', Georgia, serif;
+  --sans:      'Sora', system-ui, sans-serif;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  font-family: var(--sans);
+  color: var(--text);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ─── Deck Shell ─────────────────────────────────────────────────────── */
+#deck {
+  width: 100vw; height: 100vh;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.slide {
+  position: absolute;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  background: var(--slide-bg);
+  opacity: 0;
+  transform: translateX(60px);
+  transition: opacity 0.45s cubic-bezier(0.4,0,0.2,1), transform 0.45s cubic-bezier(0.4,0,0.2,1);
+  pointer-events: none;
+}
+.slide.active {
+  opacity: 1; transform: translateX(0);
+  pointer-events: all;
+  z-index: 10;
+}
+.slide.exit-left {
+  opacity: 0; transform: translateX(-60px);
+}
+
+/* ─── Gold accent bar ────────────────────────────────────────────────── */
+.slide::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold) 0%, transparent 100%);
+}
+
+/* ─── Slide padding / layout helper ─────────────────────────────────── */
+.slide-inner {
+  flex: 1;
+  padding: 52px 72px 48px;
+  display: flex; flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ─── Navigation ─────────────────────────────────────────────────────── */
+#nav {
+  position: fixed; bottom: 28px; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; z-index: 100;
+}
+.nav-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.08); border-color: var(--gold); }
+.nav-btn:disabled { opacity: 0.3; cursor: default; }
+#counter {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  min-width: 50px; text-align: center;
+}
+#dots {
+  display: flex; gap: 6px; align-items: center;
+}
+.dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  transition: background 0.3s, width 0.3s;
+  cursor: pointer;
+}
+.dot.active { background: var(--gold); width: 18px; border-radius: 3px; }
+
+/* ─── Typography ─────────────────────────────────────────────────────── */
+.label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.8;
+  margin-bottom: 14px;
+}
+.slide-title {
+  font-family: var(--serif);
+  font-size: clamp(26px, 3.2vw, 44px);
+  font-weight: 700;
+  color: var(--heading);
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+.slide-subtitle {
+  font-size: 14px;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 32px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+.rule {
+  width: 40px; height: 2px;
+  background: var(--gold);
+  margin-bottom: 28px;
+  opacity: 0.6;
+}
+p { font-size: 14.5px; line-height: 1.7; color: var(--text); }
+strong { color: var(--heading); font-weight: 600; }
+
+/* ─── Badges ─────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 10px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+.badge-risk   { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(239,68,68,0.25); }
+.badge-warn   { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,158,11,0.25);}
+.badge-ok     { background: var(--green-dim); color: var(--green); border: 1px solid rgba(74,222,128,0.25);}
+.badge-info   { background: var(--blue-dim);  color: var(--blue);  border: 1px solid rgba(91,156,246,0.25);}
+
+/* ─── Grid / Cards ───────────────────────────────────────────────────── */
+.grid { display: grid; gap: 14px; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 18px 20px;
+}
+.card-accent { border-left: 2px solid var(--gold); }
+.card-risk   { border-left: 2px solid var(--red); }
+.card-warn   { border-left: 2px solid var(--amber); }
+.card-blue   { border-left: 2px solid var(--blue); }
+.card-green  { border-left: 2px solid var(--green); }
+
+.card-id {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--gold);
+  margin-bottom: 6px;
+  letter-spacing: 0.1em;
+}
+.card-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--heading);
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+.card-body {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.6;
+}
+.card-weight {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+/* ─── Table ──────────────────────────────────────────────────────────── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th {
+  text-align: left;
+  padding: 9px 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border-bottom: 1px solid var(--border);
+}
+.tbl td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ─── Weight bar ─────────────────────────────────────────────────────── */
+.wbar-wrap { display: flex; align-items: center; gap: 8px; }
+.wbar { height: 4px; border-radius: 2px; background: var(--gold); opacity: 0.7; }
+.wbar-pct { font-family: var(--mono); font-size: 11px; color: var(--gold); white-space: nowrap; }
+
+/* ─── Step / timeline ────────────────────────────────────────────────── */
+.steps { display: flex; gap: 0; align-items: stretch; }
+.step {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px 16px;
+  position: relative;
+}
+.step:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -14px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--gold);
+  font-size: 14px;
+  z-index: 2;
+}
+.steps { gap: 20px; }
+.step-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.step-title { font-size: 12px; font-weight: 600; color: var(--heading); margin-bottom: 4px; }
+.step-body  { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.5; }
+
+/* ─── Action item ────────────────────────────────────────────────────── */
+.action-list { display: flex; flex-direction: column; gap: 10px; }
+.action-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 18px;
+}
+.action-num {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--gold);
+  min-width: 24px;
+  line-height: 1.4;
+}
+.action-text { font-size: 13.5px; color: var(--text); line-height: 1.6; }
+.action-text strong { color: var(--heading); }
+
+/* ─── Inline mono ────────────────────────────────────────────────────── */
+code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: rgba(255,255,255,0.06);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: #93c5fd;
+}
+
+/* ─── Cover slide specifics ──────────────────────────────────────────── */
+#s0 { justify-content: center; align-items: center; text-align: center; }
+#s0 .cover-kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 22px;
+}
+#s0 .cover-title {
+  font-family: var(--serif);
+  font-size: clamp(40px, 5.5vw, 76px);
+  font-weight: 900;
+  color: var(--heading);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-bottom: 14px;
+}
+#s0 .cover-sub {
+  font-size: 15px;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 40px;
+  font-weight: 300;
+}
+#s0 .cover-meta {
+  display: flex; gap: 32px; justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+}
+#s0 .cover-meta span { color: rgba(255,255,255,0.55); }
+#s0 .cover-divider {
+  width: 60px; height: 1px;
+  background: var(--gold);
+  margin: 0 auto 40px;
+  opacity: 0.5;
+}
+/* Ambient glow on cover */
+#s0::after {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ─── Two-col layout helper ──────────────────────────────────────────── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; flex: 1; }
+
+/* ─── Stat blocks ────────────────────────────────────────────────────── */
+.stat-row { display: flex; gap: 14px; margin-bottom: 18px; }
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 14px 18px; min-width: 100px;
+}
+.stat-val { font-family: var(--serif); font-size: 28px; color: var(--gold); line-height: 1; }
+.stat-lbl { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+/* ─── Risk callout ───────────────────────────────────────────────────── */
+.risk-box {
+  background: var(--red-dim);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 6px;
+  padding: 14px 18px;
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.risk-icon { font-size: 16px; line-height: 1.5; }
+.risk-text { font-size: 13px; line-height: 1.6; }
+
+.cf-note {
+  background: rgba(245,158,11,0.07);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.6;
+  margin-top: 10px;
+}
+.cf-note strong { color: var(--amber); }
+
+/* ─── Scrollable content helper ─────────────────────────────────────── */
+.scroll-y { overflow-y: auto; flex: 1; }
+.scroll-y::-webkit-scrollbar { width: 3px; }
+.scroll-y::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* keyboard hint */
+#hint {
+  position: fixed; bottom: 70px; right: 32px;
+  font-family: var(--mono); font-size: 10px;
+  color: rgba(255,255,255,0.18);
+  letter-spacing: 0.1em;
+}
+</style>
+</head>
+<body>
+
+<div id="deck">
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 0: COVER -->
+<div class="slide active" id="s0">
+  <div class="cover-kicker">CVS Health  ·  Information Security</div>
+  <div class="cover-title">3PLZ POC<br>Vendor Overview</div>
+  <div class="cover-sub">Third-Party Landing Zone  ·  Cloudflare Kickoff</div>
+  <div class="cover-divider"></div>
+  <div class="cover-meta">
+    <div>Date: <span>May 25, 2026</span></div>
+    <div>Lead: <span>Michael J. Martin</span></div>
+    <div>Audience: <span>Cloudflare POC Team</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 1: PROBLEM -->
+<div class="slide" id="s1">
+  <div class="slide-inner">
+    <div class="label">Context</div>
+    <div class="slide-title">Why This Program Exists</div>
+    <div class="rule"></div>
+    <div class="grid grid-3" style="flex:1; align-content:start; gap:16px; margin-top:8px;">
+      <div class="card card-accent">
+        <div class="card-id">THE PROBLEM</div>
+        <div class="card-heading">Ungoverned Partner Mesh</div>
+        <div class="card-body">Conventional third-party connectivity is bilateral and accumulative — each partner produces a VPN tunnel, a firewall rule, and an informal agreement. Over time this becomes an ungoverned mesh with no structural isolation guarantees.</div>
+      </div>
+      <div class="card card-accent">
+        <div class="card-id">CVS SCALE</div>
+        <div class="card-heading">15+ Acquisition Domains</div>
+        <div class="card-body">Caremark, Omnicare, Aetna, Oak Street Health, and a dozen more integration domains. Partner connectivity requests arrive across organizational boundaries with inconsistent tooling, naming conventions, and inspection standards.</div>
+      </div>
+      <div class="card card-accent">
+        <div class="card-id">THE FIX</div>
+        <div class="card-heading">Per-Tenant Mediation Model</div>
+        <div class="card-body">3PLZ interposes a mandatory mediation layer. Every partner connects to a routing-isolated tenant. Every session transits a managed proxy and inline inspection plane. The platform is the sole path, the sole enforcement point, and the complete audit record.</div>
+      </div>
+    </div>
+    <div style="margin-top:20px; padding:16px 20px; background:var(--surface); border:1px solid var(--border); border-radius:6px;">
+      <p style="font-size:13px;">The partner obtains no direct routing path to any CVS network. CVS exposes no internal addressing to any partner. <strong>The 3PLZ platform is what you are being evaluated as.</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 2: ARCHITECTURE -->
+<div class="slide" id="s2">
+  <div class="slide-inner">
+    <div class="label">Architecture</div>
+    <div class="slide-title">The 3PLZ Mediation Model</div>
+    <div class="rule"></div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 20px; margin-bottom:18px; font-size:13px;">
+      <strong>Connectivity model:</strong> &nbsp; Partner &nbsp; → &nbsp; <span style="color:var(--gold); font-family:var(--mono);">3PLZ Tenant</span> &nbsp; ↔ &nbsp; Enterprise &nbsp;&nbsp; · &nbsp;&nbsp; No direct partner↔enterprise routing at any layer.
+    </div>
+    <div class="grid grid-2" style="flex:1; align-content:start; gap:14px;">
+      <div class="card card-blue">
+        <div class="card-id">01  TENANT ISOLATION</div>
+        <div class="card-heading">Structural, not policy-based</div>
+        <div class="card-body">Each partner occupies a dedicated Virtual Router domain. No cross-tenant route exists. A misconfigured security policy rule cannot create cross-tenant reachability.</div>
+      </div>
+      <div class="card card-blue">
+        <div class="card-id">02  CONNECTIVITY</div>
+        <div class="card-heading">IPSec IKEv2 VTI tunnels</div>
+        <div class="card-body">Partners connect via IKEv2 VTI. IKE anchor in Internet (untrust) zone. Decapsulated partner traffic emerges in a per-partner zone on the platform firewall.</div>
+      </div>
+      <div class="card card-blue">
+        <div class="card-id">03  TRANSLATION</div>
+        <div class="card-heading">Dual-Proxy or SNAT-to-SNAT</div>
+        <div class="card-body">Bidirectional L3 translation abstracts partner and enterprise address spaces. Neither endpoint sees the other's real addressing. Key custody stays at the platform.</div>
+      </div>
+      <div class="card card-blue">
+        <div class="card-id">04  INSPECTION PLANE</div>
+        <div class="card-heading">Per-tenant inline DLP / Threat Prevention</div>
+        <div class="card-body">Decrypted in-flight traffic — TLS and SSH — is steered to a CVS-designated per-tenant inspection container. Platform delivers plaintext payload only; no session keys leave the vendor edge.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 3: EVAL FRAMEWORK -->
+<div class="slide" id="s3">
+  <div class="slide-inner">
+    <div class="label">Evaluation</div>
+    <div class="slide-title">Capability Requirement Framework</div>
+    <div class="rule"></div>
+    <div class="two-col" style="gap:20px; flex:1; align-content:start;">
+      <div>
+        <table class="tbl">
+          <thead><tr><th>CR</th><th>Capability</th><th>Weight</th><th>Risk Level</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>CR-01</code></td>
+              <td>Per-Tenant mTLS CA Isolation</td>
+              <td>
+                <div class="wbar-wrap"><div class="wbar" style="width:46px;"></div><span class="wbar-pct">23%</span></div>
+              </td>
+              <td><span class="badge badge-risk">HIGHEST</span></td>
+            </tr>
+            <tr>
+              <td><code>CR-02</code></td>
+              <td>SSH Managed Access + Credential Vault</td>
+              <td><div class="wbar-wrap"><div class="wbar" style="width:36px;"></div><span class="wbar-pct">18%</span></div></td>
+              <td><span class="badge badge-warn">HIGH</span></td>
+            </tr>
+            <tr>
+              <td><code>CR-03</code></td>
+              <td>Per-Tenant DNS Rewriting</td>
+              <td><div class="wbar-wrap"><div class="wbar" style="width:20px;"></div><span class="wbar-pct">10%</span></div></td>
+              <td><span class="badge badge-info">MED</span></td>
+            </tr>
+            <tr>
+              <td><code>CR-04</code></td>
+              <td>Tenant Lifecycle: Provision &amp; Offboard</td>
+              <td><div class="wbar-wrap"><div class="wbar" style="width:36px;"></div><span class="wbar-pct">18%</span></div></td>
+              <td><span class="badge badge-warn">HIGH</span></td>
+            </tr>
+            <tr>
+              <td><code>CR-05</code></td>
+              <td>Multi-Tenant Isolation at Scale</td>
+              <td><div class="wbar-wrap"><div class="wbar" style="width:10px;"></div><span class="wbar-pct">5%</span></div></td>
+              <td><span class="badge badge-risk">CRIT</span></td>
+            </tr>
+            <tr>
+              <td><code>CR-06</code></td>
+              <td>Outbound Governed Access (CVS→Partner)</td>
+              <td><div class="wbar-wrap"><div class="wbar" style="width:20px;"></div><span class="wbar-pct">10%</span></div></td>
+              <td><span class="badge badge-warn">HIGH</span></td>
+            </tr>
+            <tr>
+              <td><code>CR-07</code></td>
+              <td>Third-Party Inline Inspection Plumbing</td>
+              <td><div class="wbar-wrap"><div class="wbar" style="width:16px;"></div><span class="wbar-pct">8%</span></div></td>
+              <td><span class="badge badge-risk">STRUCT</span></td>
+            </tr>
+            <tr>
+              <td><code>EW-01–06</code></td>
+              <td>Engineering Workflows / Self-Service API</td>
+              <td><div class="wbar-wrap"><div class="wbar" style="width:16px;"></div><span class="wbar-pct">8%</span></div></td>
+              <td><span class="badge badge-info">MED</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="card card-risk">
+          <div class="card-id">CLOUDFLARE — OPEN EVALUATIVE ITEMS</div>
+          <div class="card-heading">Two structural items require proposal at kickoff</div>
+          <div class="card-body" style="margin-top:8px;">
+            <div style="margin-bottom:8px;"><strong>CR-01:</strong> Per-tenant CA isolation — Cloudflare native mTLS is single-account. Isolation approach (a–d) must be committed today.</div>
+            <div><strong>CR-07:</strong> No first-class post-decryption steering primitive. Realization (GENEVE / Workers / Magic WAN on-ramp) must be named today.</div>
+          </div>
+        </div>
+        <div class="card card-accent" style="margin-top:auto;">
+          <div class="card-id">SCORING MODEL</div>
+          <div class="card-body">Evidence bundles scored by CVS architecture team post-POC. Both vendors (F5 and Cloudflare) run against the identical acceptance criteria. Scores are not shared between vendors during POC execution.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 4: CR-01 -->
+<div class="slide" id="s4">
+  <div class="slide-inner">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+      <div class="label" style="margin:0;">CR-01</div>
+      <span class="badge badge-risk">23% — HIGHEST STRUCTURAL RISK</span>
+    </div>
+    <div class="slide-title">Per-Tenant mTLS CA Isolation</div>
+    <div class="rule"></div>
+    <div class="two-col" style="flex:1; gap:20px; align-content:start;">
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="card card-accent">
+          <div class="card-id">WHAT WE REQUIRE</div>
+          <div class="card-body">Each tenant receives an independent intermediate certificate authority. A partner certificate issued by Tenant A's CA must be rejected at the Tenant B proxy listener at the <strong>trust-validation layer</strong> — not at policy, not at routing.</div>
+        </div>
+        <div class="card card-accent">
+          <div class="card-id">THE DISTINCTION</div>
+          <div class="card-body">Structural rejection means the platform cryptographically cannot accept the certificate regardless of any policy path. A misconfigured allow rule must not create a cross-tenant mTLS bypass.</div>
+        </div>
+        <div class="card card-accent">
+          <div class="card-id">REVOCATION</div>
+          <div class="card-body">CRL and OCSP enforcement required within the platform's stated cache window. Revocation must block new connections and be testable with a cache TTL ≤ 5 minutes for the harness run.</div>
+        </div>
+      </div>
+      <div>
+        <div class="card card-risk" style="margin-bottom:14px;">
+          <div class="card-id">CLOUDFLARE — OPEN ITEM</div>
+          <div class="card-heading">CA isolation approach must be committed today</div>
+          <div class="card-body" style="margin-top:8px;">
+            Cloudflare's native mTLS model is single-account. Four candidate approaches are in the POC Deliverables v4:<br><br>
+            <strong>a)</strong> Native account-level mTLS isolation (if achievable)<br>
+            <strong>b)</strong> Dedicated Cloudflare account per tenant<br>
+            <strong>c)</strong> Engineered sub-account CA scoping<br>
+            <strong>d)</strong> SI-managed PKI with custom binding<br><br>
+            The approach chosen determines how the adversarial test battery (chain manipulation, SAN overlap, shared-root pivot) is instrumented. Harness cannot be finalized without this commitment.
+          </div>
+        </div>
+        <div class="card card-blue">
+          <div class="card-id">TEST COVERAGE</div>
+          <div class="card-body">9 test cases: TC-CR01-001 through TC-CR01-009. Layer 1 positive path + outbound mTLS. Layer 3 adversarial: SAN overlap, chain manipulation, shared-root pivot, cross-tenant cert presentation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 5: CR-02 THRU CR-06 -->
+<div class="slide" id="s5">
+  <div class="slide-inner">
+    <div class="label">Capability Requirements</div>
+    <div class="slide-title">CR-02 through CR-06 — Summary</div>
+    <div class="rule"></div>
+    <div class="grid" style="grid-template-columns:1fr 1fr; gap:14px; flex:1; align-content:start;">
+      <div class="card card-blue">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="card-id">CR-02  ·  SSH MANAGED ACCESS</div>
+          <span class="badge badge-warn" style="flex-shrink:0;">18%</span>
+        </div>
+        <div class="card-heading" style="margin-top:8px;">Full SSH session termination — not TCP passthrough</div>
+        <div class="card-body">Partner authenticates via email + TOTP. Platform injects vault-resident internal credential for backend session. Partner never sees internal credential. SSH traffic must terminate at the proxy — the backend SSH daemon must see platform-internal source IP only.</div>
+        <div class="cf-note"><strong>Cloudflare:</strong> SSH proxy and credential vault integration. No structural risk identified — confirm SSH session termination (not passthrough) support.</div>
+      </div>
+      <div class="card card-blue">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="card-id">CR-03  ·  PER-TENANT DNS REWRITING</div>
+          <span class="badge badge-info" style="flex-shrink:0;">10%</span>
+        </div>
+        <div class="card-heading" style="margin-top:8px;">Internal FQDNs resolve to SNAT VIP, not real IPs</div>
+        <div class="card-body">Each tenant has a structurally dedicated DNS listener VIP. Partner-side DNS query for a CVS internal FQDN must return the tenant's SNAT inbound VIP. Cross-tenant DNS disclosure is tested adversarially.</div>
+        <div class="cf-note"><strong>Cloudflare:</strong> Per-tenant CoreDNS forwarding context. Structural isolation of DNS listener per tenant required.</div>
+      </div>
+      <div class="card card-blue">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="card-id">CR-04  ·  TENANT LIFECYCLE</div>
+          <span class="badge badge-warn" style="flex-shrink:0;">18%</span>
+        </div>
+        <div class="card-heading" style="margin-top:8px;">Provisioning + zero-residual-state offboarding</div>
+        <div class="card-body">Tenant provisioning from schema with zero manual steps. Offboarding tested against zero-residual-state: no routing entries, no CA residue, no audit contamination, no reachability to formerly-served endpoints. Run 3× per tenant.</div>
+      </div>
+      <div class="card card-blue">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="card-id">CR-05  ·  MULTI-TENANT ISOLATION AT SCALE</div>
+          <span class="badge badge-risk" style="flex-shrink:0;">5%</span>
+        </div>
+        <div class="card-heading" style="margin-top:8px;">5 tenants simultaneous, 6 vectors × 20 ordered pairs</div>
+        <div class="card-body">Low weight because CR-01 is the structural prerequisite. CR-05 verifies the composition holds with all five tenants active. A single failure in any of the 120 ordered-pair isolation tests fails CR-05 outright.</div>
+      </div>
+      <div class="card card-blue" style="grid-column: span 2;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="card-id">CR-06  ·  OUTBOUND GOVERNED ACCESS</div>
+          <span class="badge badge-warn" style="flex-shrink:0;">10%</span>
+        </div>
+        <div class="card-heading" style="margin-top:8px;">CVS-initiated sessions to declared third-party endpoints — same inspection, same audit</div>
+        <div class="card-body">Outbound access to declared destinations allowed with TLS inspection active. Undeclared destinations blocked. CVS client certificates presented to the third-party endpoint. Outbound is a first-class governed access mode, not a policy exception or workaround.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 6: CR-07 -->
+<div class="slide" id="s6">
+  <div class="slide-inner">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+      <div class="label" style="margin:0;">CR-07</div>
+      <span class="badge badge-risk">STRUCTURAL RISK — CLOUDFLARE</span>
+      <span class="badge badge-info" style="margin-left:auto;">8% weight</span>
+    </div>
+    <div class="slide-title">Third-Party Inline Inspection Plumbing</div>
+    <div class="rule"></div>
+    <div class="two-col" style="flex:1; gap:20px; align-content:start;">
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div class="card card-accent">
+          <div class="card-id">WHAT WE REQUIRE</div>
+          <div class="card-body">
+            A per-tenant steering primitive that routes <strong>decrypted in-flight TLS and SSH payload</strong> to a CVS-designated per-tenant inspection container (Palo Alto VM-Series vsys-per-tenant in the reference design).<br><br>
+            Key-custody stays at the vendor edge. Inspection appliance receives plaintext payload only — no session keys. Per-tenant decrypt-exclusion list supported. Fail-closed is the POC default.
+          </div>
+        </div>
+        <div class="card card-accent">
+          <div class="card-id">SCOPE — PLUMBING ONLY</div>
+          <div class="card-body">CR-07 does not evaluate DLP detection accuracy, signature coverage, or inspection appliance performance. It evaluates whether the vendor platform can deliver the steering contract. Inspection product selection is a separate program.</div>
+        </div>
+        <div class="card card-accent">
+          <div class="card-id">TEST COVERAGE</div>
+          <div class="card-body">12 harness tests (I-01 through I-12): per-tenant steering inbound + outbound, cross-tenant scope isolation, decrypt-exclusion list, fail-closed / fail-open semantics, SSH session inspection, telemetry correlation (≥99% join rate), key custody verification, lifecycle offboarding.</div>
+        </div>
+      </div>
+      <div>
+        <div class="card card-risk" style="margin-bottom:14px;">
+          <div class="card-id">CLOUDFLARE — REALIZATION MUST BE NAMED TODAY</div>
+          <div class="card-heading">No first-class post-decryption steering primitive</div>
+          <div class="card-body" style="margin-top:10px;">
+            Cloudflare does not provide a native post-decryption steering primitive equivalent to an F5 service-policy chain. Three candidate realizations are in the POC Deliverables v4:<br><br>
+            <strong>Option A:</strong> GENEVE encapsulation via Magic Network — routes decrypted traffic to CVS inspection appliance<br><br>
+            <strong>Option B:</strong> Sub-tenant Workers function as the per-tenant inspection primitive<br><br>
+            <strong>Option C:</strong> Customer-operated Magic WAN on-ramp as traffic intercept<br><br>
+            <strong style="color:var(--red);">The integrator must name one of these realizations today.</strong> The harness test instrumentation for I-01 through I-12 cannot be finalized without knowing the steering architecture.
+          </div>
+        </div>
+        <div style="background:var(--amber-dim); border:1px solid rgba(245,158,11,0.2); border-radius:6px; padding:12px 16px;">
+          <div style="font-family:var(--mono); font-size:10px; color:var(--amber); margin-bottom:6px;">KEY CUSTODY REQUIREMENT (CR-07.3)</div>
+          <div style="font-size:12.5px; color:rgba(255,255,255,0.65); line-height:1.6;">Whichever realization is chosen, the inspection container must receive plaintext payload only. TLS session private keys and key material must be absent from the inspection device's configuration, disk, and memory. This is tested adversarially in I-10 (key custody verification).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 7: TEST PROGRAM -->
+<div class="slide" id="s7">
+  <div class="slide-inner">
+    <div class="label">Test Program</div>
+    <div class="slide-title">Four-Layer Structure + Inspection Plane</div>
+    <div class="rule"></div>
+    <div style="margin-bottom:18px;">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">LAYER 1</div>
+          <div class="step-title">Single-Tenant Capability</div>
+          <div class="step-body">Each CR demonstrated on Tenant t01. 16 tests. Gate: all pass before Layer 2 begins.</div>
+        </div>
+        <div class="step" style="border-color:rgba(201,168,76,0.3); background:var(--gold-dim);">
+          <div class="step-num" style="color:var(--amber);">INSP. PLANE</div>
+          <div class="step-title" style="color:var(--amber);">CR-07 Plumbing</div>
+          <div class="step-body">I-01 through I-12. After Layer 1; gate for Layer 2. 12 tests.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">LAYER 2</div>
+          <div class="step-title">Multi-Tenant Isolation</div>
+          <div class="step-body">5 tenants, 6 vectors × 20 pairs. ~120 executions. Gate: 100% pass.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">LAYER 3</div>
+          <div class="step-title">Adversarial / Negative</div>
+          <div class="step-body">CR-01 attack battery, TCP passthrough probes, undeclared destination block. ~20 tests.</div>
+        </div>
+        <div class="step" style="border-left-color:var(--green);">
+          <div class="step-num">LAYER 4</div>
+          <div class="step-title">Lifecycle</div>
+          <div class="step-body">EW-01 + EW-03 round-trip ×3 per tenant. Zero-residual-state gate. Final POC gate.</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-3" style="gap:14px;">
+      <div class="card card-accent">
+        <div class="card-id">IPSEC PRE-FLIGHT</div>
+        <div class="card-heading">22 transport layer tests run first</div>
+        <div class="card-body">VTI and crypto-map tests on Cisco IOS, PAN-OS, Arista CloudEOS, strongSwan. AES-256-GCM + SHA-384 + DH Group 19 required. Weak cipher rejection confirmed. No CR test is meaningful if transport does not pass.</div>
+      </div>
+      <div class="card card-accent">
+        <div class="card-id">TOTAL CATALOG</div>
+        <div class="card-weight">137</div>
+        <div class="card-body">Test entries across all layers. ~3 hours per full vendor run. 1–2 runs expected per vendor. Fix cycles: ≤5 business day vendor SLA per defect.</div>
+      </div>
+      <div class="card card-accent">
+        <div class="card-id">EVIDENCE FORMAT</div>
+        <div class="card-heading">Artifacts per test case</div>
+        <div class="card-body">pcap, audit log, CLI state dumps, API state snapshots, vault audit log. All stored in S3 with COMPLIANCE Object Lock. Harness orchestrator generates manifest.json per run.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 8: TOPOLOGY -->
+<div class="slide" id="s8">
+  <div class="slide-inner">
+    <div class="label">Test Environment</div>
+    <div class="slide-title">POC Test Topology</div>
+    <div class="rule"></div>
+    <div class="two-col" style="flex:1; gap:20px; align-content:start;">
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div class="card card-accent">
+          <div class="card-id">3PLZ PLATFORM — PALO ALTO STRATA FW</div>
+          <div class="card-body">
+            Four-zone architecture · Per-zone Virtual Router<br>
+            <strong>Internet (untrust):</strong> IKE anchor endpoints<br>
+            <strong>P1-Zone + VR-P1:</strong> Partner-ABC VTI interfaces<br>
+            <strong>P2-Zone + VR-P2:</strong> Partner-XYZ VTI interface<br>
+            <strong>3PLZ DMZ (Trust):</strong> P1-Ent, P2-Ent, inspection appliance<br>
+            <br>Policy: P1→DMZ, P2→DMZ, DMZ→P1, DMZ→P2. No P1↔P2 route.
+          </div>
+        </div>
+        <div class="card card-blue">
+          <div class="card-id">PARTNER-ABC  ·  ACTIVE/PASSIVE HA</div>
+          <div class="card-body">Two router appliances (Cisco/PA/Arista). VPC route table failover on primary failure. Two VTI tunnels to P1-Zone (primary metric 10, standby metric 20). <strong>Inbound:</strong> SSH + SFTP clients. <strong>Outbound targets:</strong> API + HTTPS.</div>
+        </div>
+        <div class="card card-blue">
+          <div class="card-id">PARTNER-XYZ  ·  SINGLE PATH</div>
+          <div class="card-body">One router appliance. Single VTI tunnel to P2-Zone. <strong>Inbound:</strong> API + HTTPS clients. <strong>Outbound targets:</strong> SSH + SFTP.</div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div class="card card-green">
+          <div class="card-id">ENTERPRISE ENVIRONMENT</div>
+          <div class="card-body">
+            Connected via P1-Ent and P2-Ent dedicated interfaces — distinct per-partner virtual segments.<br><br>
+            <strong>P1-Ent segment:</strong> SSH + SFTP inbound targets · API + HTTPS outbound clients<br>
+            <strong>P2-Ent segment:</strong> API + HTTPS inbound targets · SSH + SFTP outbound clients<br><br>
+            Per-partner segment isolation is maintained end-to-end from partner router to enterprise test endpoint.
+          </div>
+        </div>
+        <div class="card card-accent">
+          <div class="card-id">BIDIRECTIONAL PROTOCOL COVERAGE</div>
+          <div class="card-body">
+            <table style="width:100%; font-size:11.5px; border-collapse:collapse;">
+              <tr style="color:var(--gold); font-family:var(--mono); font-size:10px;"><td style="padding:4px 0;">PARTNER</td><td>→ ENTERPRISE</td><td>← ENTERPRISE</td></tr>
+              <tr style="border-top:1px solid var(--border);"><td style="padding:6px 0; color:var(--heading);">ABC</td><td>SSH, SFTP</td><td>API, HTTPS</td></tr>
+              <tr style="border-top:1px solid var(--border);"><td style="padding:6px 0; color:var(--heading);">XYZ</td><td>API, HTTPS</td><td>SSH, SFTP</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="card card-accent">
+          <div class="card-id">IPSEC BASELINE</div>
+          <div class="card-body">AES-256-GCM · SHA-384 · DH Group 19 · ESP AES-256-GCM · PFS Group 19 · DPD 30s/120s · SA lifetime 8h/1h</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 9: SCHEDULE -->
+<div class="slide" id="s9">
+  <div class="slide-inner">
+    <div class="label">Program</div>
+    <div class="slide-title">POC Milestone Schedule</div>
+    <div class="rule"></div>
+    <table class="tbl" style="margin-bottom:20px;">
+      <thead><tr><th>Milestone</th><th>Target</th><th>Gate Condition</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Harness Provisioning</strong></td>
+          <td><code>May 8–22</code></td>
+          <td>All IPSec peer Ansible roles pass <code>--check</code>; vault PSK paths provisioned; OCSP responders running</td>
+          <td><span class="badge badge-ok">COMPLETE</span></td>
+        </tr>
+        <tr>
+          <td><strong>Vendor Kickoff</strong></td>
+          <td><code>May 25</code> ← TODAY</td>
+          <td>Cloudflare integrator names CR-07 realization; both vendors confirm CR-01 approach; named primary + backup SEs</td>
+          <td><span class="badge badge-warn">TODAY</span></td>
+        </tr>
+        <tr>
+          <td><strong>M2 — IPSec Transport Gate</strong></td>
+          <td><code>June 6</code></td>
+          <td>All VTI tunnels UP; IKEv2 AES-256-GCM + Group 19 confirmed; weak algorithm rejection confirmed; Layer 1 tests begin</td>
+          <td><span class="badge badge-info">PENDING</span></td>
+        </tr>
+        <tr>
+          <td><strong>M3 — Inspection Plane</strong></td>
+          <td><code>June 13</code></td>
+          <td>CR-07 demonstrated on two tenants (I-01 through I-09); Layer 2 multi-tenant isolation tests begin</td>
+          <td><span class="badge badge-info">PENDING</span></td>
+        </tr>
+        <tr>
+          <td><strong>M4 — Adversarial + Lifecycle</strong></td>
+          <td><code>July 11</code></td>
+          <td>Layers 3 and 4 complete; SA rekey non-disruptive; cert revocation blocks re-establishment</td>
+          <td><span class="badge badge-info">PENDING</span></td>
+        </tr>
+        <tr>
+          <td><strong>POC Completion Gate</strong></td>
+          <td><code>July 30</code></td>
+          <td>All pass-gate layers complete; evidence bundles delivered to CVS evaluation team</td>
+          <td><span class="badge badge-info">PENDING</span></td>
+        </tr>
+        <tr>
+          <td><strong>Platform Decision</strong></td>
+          <td><code>October 2026</code></td>
+          <td>Following CVS leadership review of POC evidence bundles and vendor scorecard</td>
+          <td><span class="badge badge-info">PENDING</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="card" style="background:var(--amber-dim); border-color:rgba(245,158,11,0.2);">
+      <div style="font-size:13px; color:rgba(255,255,255,0.7); line-height:1.6;">
+        <strong style="color:var(--amber);">Critical path item:</strong> Cloudflare's CR-01 isolation approach and CR-07 realization must be committed today. The SI cannot begin Cloudflare-specific harness instrumentation until these are confirmed. Delay shifts M2.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 10: CF COMMITMENTS -->
+<div class="slide" id="s10">
+  <div class="slide-inner">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+      <div class="label" style="margin:0;">Cloudflare</div>
+      <span class="badge badge-warn">ACTION REQUIRED TODAY</span>
+    </div>
+    <div class="slide-title">What We Need From You — Today</div>
+    <div class="rule"></div>
+    <div class="action-list" style="flex:1;">
+      <div class="action-item" style="border-left:2px solid var(--red);">
+        <div class="action-num">1</div>
+        <div class="action-text">
+          <strong>Name the CR-07 inspection-plane realization.</strong><br>
+          GENEVE via Magic Network, sub-tenant Workers, or customer-operated Magic WAN on-ramp. One of these must be committed. The integrator should be prepared to describe the proposed data path (vendor edge → steering → inspection appliance) at a high level.
+        </div>
+      </div>
+      <div class="action-item" style="border-left:2px solid var(--red);">
+        <div class="action-num">2</div>
+        <div class="action-text">
+          <strong>Commit to the CR-01 per-tenant CA isolation approach.</strong><br>
+          Approaches a–d are defined in Cloudflare POC Deliverables v4 §2.1. The chosen approach determines adversarial test instrumentation in Layer 3. SI cannot configure the harness PKI cross-tenant profiles without this.
+        </div>
+      </div>
+      <div class="action-item" style="border-left:2px solid var(--amber);">
+        <div class="action-num">3</div>
+        <div class="action-text">
+          <strong>Name primary and backup vendor SEs for the full POC window (now through July 30).</strong><br>
+          Named SEs committed to the POC window with ≤5 business day response SLA for defect resolution.
+        </div>
+      </div>
+      <div class="action-item" style="border-left:2px solid var(--amber);">
+        <div class="action-num">4</div>
+        <div class="action-text">
+          <strong>Confirm vendor SE items V10–V13 for Magic WAN IPSec compatibility.</strong><br>
+          <strong>V10:</strong> Magic WAN supports certificate-based IKEv2 auth (not PSK-only) ·
+          <strong>V11:</strong> AES-256-GCM + SHA-384 + DH Group 19 in Phase 1 and 2; <code>NO_PROPOSAL_CHOSEN</code> for DES/3DES/MD5/Group-1/2/5 ·
+          <strong>V12:</strong> DPD enabled (30s/120s) on vendor edge side ·
+          <strong>V13:</strong> CRL/OCSP checked on IKEv2 peer cert re-establishment
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 11: DECISION POINTS + NEXT STEPS -->
+<div class="slide" id="s11">
+  <div class="slide-inner">
+    <div class="label">Wrap-Up</div>
+    <div class="slide-title">Open Decision Points &amp; Next Steps</div>
+    <div class="rule"></div>
+    <div class="two-col" style="flex:1; gap:20px; align-content:start;">
+      <div>
+        <div style="font-family:var(--mono); font-size:10px; color:var(--gold); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:12px;">CVS Internal — Leadership Confirmation Needed</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="card card-accent">
+            <div class="card-id">DECISION 1</div>
+            <div class="card-heading">CR-07 weight at 8%</div>
+            <div class="card-body">Current weight reflects that inspection plumbing is a structural prerequisite, not a standalone program. Raising this weight would reduce another CR's share. Is 8% the correct relative emphasis?</div>
+          </div>
+          <div class="card card-accent">
+            <div class="card-id">DECISION 2</div>
+            <div class="card-heading">Fail-closed as POC acceptance default</div>
+            <div class="card-body">Fail-closed (inspection appliance unreachable → traffic blocked) is the current default for CR-07.5 acceptance. Fail-open (traffic permitted with audit record) is available as alternative. Confirm fail-closed is the correct security posture.</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:var(--mono); font-size:10px; color:var(--gold); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:12px;">Next Steps — Post-Kickoff</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="card" style="border-left:2px solid var(--green);">
+            <div class="card-id" style="color:var(--green);">TODAY → MAY 30</div>
+            <div class="card-body">Cloudflare integrator submits written CR-01 approach and CR-07 realization commitment to CVS NSE. SI begins Cloudflare-specific harness instrumentation.</div>
+          </div>
+          <div class="card" style="border-left:2px solid var(--blue);">
+            <div class="card-id" style="color:var(--blue);">MAY 25 → JUNE 6</div>
+            <div class="card-body">Cloudflare vendor onboarding: Magic WAN deployment, per-tenant configuration, IPSec pre-flight (V10–V13 confirmation items). Target: all VTI tunnels UP by June 6.</div>
+          </div>
+          <div class="card" style="border-left:2px solid var(--blue);">
+            <div class="card-id" style="color:var(--blue);">JUNE 6 → JUNE 13</div>
+            <div class="card-body">Layer 1 evaluation run begins. CR-07 inspection plane tests (I-01 through I-09) on two tenants by June 13 (M3 gate).</div>
+          </div>
+          <div class="card" style="border-left:2px solid var(--gold);">
+            <div class="card-id">JULY 30</div>
+            <div class="card-body">POC completion gate. All evidence bundles delivered to CVS. Platform decision targeted mid-October 2026 following leadership review.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SLIDE 12: CONTACT/CLOSE -->
+<div class="slide" id="s12">
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px;">
+    <div class="label" style="text-align:center; margin-bottom:20px;">CVS Health — Information Security</div>
+    <div style="font-family:var(--serif); font-size:clamp(28px,4vw,54px); font-weight:700; color:var(--heading); margin-bottom:16px; line-height:1.1;">Questions?</div>
+    <div style="width:50px; height:2px; background:var(--gold); opacity:0.5; margin:0 auto 28px;"></div>
+    <div style="font-size:15px; color:rgba(255,255,255,0.5); max-width:520px; line-height:1.8; margin-bottom:36px;">
+      All materials referenced today are available in the distributed POC document set.<br>
+      The authoritative references are the <strong style="color:var(--heading);">POC Deliverables v4</strong> (Cloudflare) and <strong style="color:var(--heading);">Harness Specification v1.2</strong>.
+    </div>
+    <div style="display:flex; gap:28px; justify-content:center; flex-wrap:wrap;">
+      <div class="card" style="text-align:left; min-width:200px;">
+        <div class="card-id">PROGRAM LEAD</div>
+        <div class="card-heading">Michael J. Martin</div>
+        <div class="card-body">Lead Director, Information Security<br>CVS Health</div>
+      </div>
+      <div class="card" style="text-align:left; min-width:200px;">
+        <div class="card-id">COMPLETION GATE</div>
+        <div class="card-heading">July 30, 2026</div>
+        <div class="card-body">Platform decision: mid-October 2026<br>Self-service portal: September 30, 2026</div>
+      </div>
+      <div class="card" style="text-align:left; min-width:200px;">
+        <div class="card-id">DOCUMENT SET</div>
+        <div class="card-heading">6 companion documents</div>
+        <div class="card-body">Architecture v1.1 · POC Deliverables v4<br>Harness Spec v1.2 · Use Cases v1.2</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- Navigation -->
+<div id="nav">
+  <button class="nav-btn" id="prevBtn" onclick="go(-1)" disabled>&#8592;</button>
+  <div id="dots"></div>
+  <div id="counter">1 / 13</div>
+  <button class="nav-btn" id="nextBtn" onclick="go(1)">&#8594;</button>
+</div>
+<div id="hint">← → ARROW KEYS TO NAVIGATE</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let current = 0;
+let prev = -1;
+
+const dotsEl = document.getElementById('dots');
+const counter = document.getElementById('counter');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+// Build dots
+for (let i = 0; i < total; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+}
+
+function goTo(n) {
+  if (n < 0 || n >= total || n === current) return;
+  const dir = n > current ? 1 : -1;
+  slides[current].classList.remove('active');
+  if (dir > 0) slides[current].classList.add('exit-left');
+  // remove exit-left after transition
+  const old = current;
+  setTimeout(() => slides[old].classList.remove('exit-left'), 500);
+  current = n;
+  slides[current].classList.add('active');
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
+  counter.textContent = `${current + 1} / ${total}`;
+  prevBtn.disabled = current === 0;
+  nextBtn.disabled = current === total - 1;
+}
+
+function go(d) { goTo(current + d); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+  if (e.key === 'Home') goTo(0);
+  if (e.key === 'End')  goTo(total - 1);
+});
+
+// Touch swipe
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+}, {passive:true});
+</script>
+</body>
+</html>
